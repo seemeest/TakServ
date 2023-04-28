@@ -1,0 +1,111 @@
+Выполняем команды:
+
+apt-get update
+apt-get install software-properties-common python-software-properties
+apt install software-properties-common
+add-apt-repository -y ppa:ondrej/php
+apt-get update
+apt-get -y install unzip zip nginx curl php7.2 php7.2-mysql php7.2-fpm php7.2-mbstring php7.2-xml php7.2-curl redis-server
+apt-get -y install mysql-client mysql-server
+
+sudo mysql_secure_installation
+
+mysql -u root
+USE mysql;
+UPDATE user SET authentication_string=PASSWORD("Пароль") WHERE User='root';
+UPDATE user SET plugin="mysql_native_password" WHERE User='root';
+FLUSH PRIVILEGES;
+quit
+
+curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
+sudo apt-get install -y nodejs
+npm i -g pm2
+
+теперь заливаем скрипт в cd /var/www/html
+и распаковываем, после чего выволняем команду:
+
+chmod -R 777 storage
+chmod -R 777 bootstrap
+curl -sS https://getcomposer.org/installer | php
+mv composer.phar /usr/local/bin/composer
+
+# Установка phpmyadmin
+cd /usr/share
+composer create-project phpmyadmin/phpmyadmin --repository-url=https://www.phpmyadmin.net/packages.json --no-dev
+ln -s /usr/share/phpmyadmin /var/www/html/public
+
+затем заходим в /usr/share/phpmyadmin
+Создаем тут папку tmp и даем ей права 777
+и меняем имя файла config.simple.inc.php на config.inc.php
+Заходим на сайт http://www.passwordtool.hu/blowfish-password-hash-generator
+Копируем бловфиш, и вставляем в файл config.inc.php в поле $cfg['blowfish_secret'] = '';
+
+далее переходим в /etc/nginx/sites-available
+и изменяем файл default
+
+limit_conn_zone $binary_remote_addr zone=perip:10m;
+limit_conn_zone $server_name zone=perserver:10m;
+
+server {
+    listen 80;
+    listen [::]:80 ipv6only=on;
+    limit_conn perip 10;
+    limit_conn perserver 100;
+    # Log files for Debugging
+    access_log /var/log/nginx/laravel-access.log;
+    error_log /var/log/nginx/laravel-error.log;
+
+    # Webroot Directory for Laravel project
+    root /var/www/html/public;
+    index index.php index.html index.htm;
+
+    # Your Domain Name
+    server_name Домен;
+
+    location / {
+         try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    # PHP-FPM Configuration Nginx
+    location ~ \.php$ {
+         try_files $uri =404;
+         fastcgi_split_path_info ^(.+\.php)(/.+)$;
+         fastcgi_pass unix:/run/php/php7.2-fpm.sock;
+         fastcgi_index index.php;
+         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+         include fastcgi_params;
+    }
+}
+
+Перезапускаем nginx командой:
+
+service nginx restart
+
+sudo service redis-server restart
+ls -lh /var/run/redis
+
+//Права на бота
+chmod -R 777 /var/www/html/storage/bot
+
+Заходим в phpmyadmin, заливаем базу и настраиваем .env файл в каталоге /var/www/html
+
+Далее нам нужно загрузить сертификаты для работы бота (если работаем с ssl).
+Переходим в каталог /var/www/html/storage/bot и перемещаем сертификат и ключ в эту папку.
+
+Авторизируемся на сайте и выдаем права администратора, переходим в админ панель /admin и настраиваем систему оплаты.
+
+/etc/letsencrypt/live/
+
+и там будет fullchain.pem и privkey.pem
+
+Для этого нам нужен SSL , вот как его нужно ставить:
+
+sudo apt-get update
+sudo apt-get install software-properties-common
+sudo add-apt-repository ppa:certbot/certbot
+sudo apt-get update
+sudo apt-get install python-certbot-nginx
+
+И ставим сам SSL
+
+sudo certbot --nginx
